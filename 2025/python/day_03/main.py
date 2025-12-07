@@ -40,7 +40,6 @@ def part_two(banks):
     for bank in banks:
         bank = bank.strip()
         wanted_length = 12
-        remaining_char = wanted_length
         index = 0
         highest_number_str = str()
         
