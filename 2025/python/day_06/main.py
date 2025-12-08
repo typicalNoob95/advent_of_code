@@ -35,7 +35,7 @@ def part_one():
 def part_two():
     grid =[]
     operations: list[str] = []
-    with open("2025/python/day_06/sample.txt", "r") as file:
+    with open("2025/python/day_06/input.txt", "r") as file:
         lines = file.readlines()
         number_of_lines = len(lines)
         for index, line in enumerate(lines):
@@ -47,13 +47,31 @@ def part_two():
     for line in grid:
         print(line)
     print()
+
+    equations = [[]]
+    equation_index = 0
+    for x in range(len(grid[0])):
+        number_str = str()
+        for y in range(len(grid)):
+            if grid[y][x] != " ":
+                number_str += grid[y][x]
+        
+        if number_str.strip() != "":
+            equations[equation_index].append(int(number_str))
+        else:
+            equation_index += 1
+            equations.append([])
+    
+    print(equations)
     print(operations)
 
-    max_length_of_number = len(grid[0]) // len(operations)
-    print(max_length_of_number)
-
-    for i in range(max_length_of_number, len(grid[0])):
-        pass
+    total = 0
+    for e in range(len(equations)):
+        if operations[e] == "+":
+            total += sum(equations[e])
+        else:
+            total += math.prod(equations[e])
+    print(total)
 
 
 
