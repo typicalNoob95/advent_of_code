@@ -1,3 +1,5 @@
+from collections import deque
+
 def print_grid(grid):
     for line in grid:
         print(line)
@@ -31,6 +33,22 @@ def part_two():
             grid.append([char for char in line.strip()])
 
     grid[1][grid[0].index("S")] = "|"
+    moves = deque([(1, grid[0].index("S"))])
+    timelines = 1
+
+    while moves:
+        move = moves.popleft()
+        if move[0] < len(grid) - 1 and move[1] < len(grid[move[0]]) - 1:
+            if grid[move[0] + 1][move[1]] == "^":
+                timelines += 1
+                moves.append((move[0]+1, move[1]-1))
+                moves.append((move[0]+1, move[1]+1))
+            else:
+                moves.append((move[0] + 1, move[1]))
+    
+    print(timelines)
+
+
 
 
 
