@@ -26,28 +26,34 @@ def part_one():
     
     print(number_of_split)
 
+
+def set_grid_value(char: str) -> int | str:
+    if char == ".":
+        return 0
+    else:
+        return char
+
 def part_two():
-    with open("2025/python/day_07/sample.txt", "r") as file:
+    with open("2025/python/day_07/input.txt", "r") as file:
         grid = []
         for line in file.readlines():
-            grid.append([char for char in line.strip()])
+            grid.append([set_grid_value(char) for char in line.strip()])
 
-    grid[1][grid[0].index("S")] = "|"
-    moves = deque([(1, grid[0].index("S"))])
-    timelines = 1
+    grid_height = len(grid)
+    grid_width = len(grid[0])
 
-    while moves:
-        move = moves.popleft()
-        if move[0] < len(grid) - 1 and move[1] < len(grid[move[0]]) - 1:
-            if grid[move[0] + 1][move[1]] == "^":
-                timelines += 1
-                moves.append((move[0]+1, move[1]-1))
-                moves.append((move[0]+1, move[1]+1))
-            else:
-                moves.append((move[0] + 1, move[1]))
-    
+    grid[1][grid[0].index("S")] = 1
+    for y in range(grid_height-1):
+        for x in range(grid_width):
+            if type(grid[y][x]) == int and grid[y][x] > 0:
+                if grid[y+1][x] == "^":
+                    grid[y+1][x-1] += grid[y][x]
+                    grid[y+1][x+1] += grid[y][x]
+                else:
+                    grid[y+1][x] += grid[y][x]
+            #print_grid(grid)
+    timelines = sum(grid[grid_height-1])
     print(timelines)
-
 
 
 
