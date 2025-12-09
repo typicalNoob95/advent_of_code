@@ -1,18 +1,23 @@
 import re
 import math
-import collections # Peut être utile pour une structure plus propre, mais non obligatoire
+from typing import List, Tuple, Dict, Any
+
+# Définition de type pour les coordonnées d'une boîte de jonction
+JunctionBox = Tuple[int, int, int] 
+# Définition de type pour une arête : (Boîte1, Boîte2, Distance_Carrée)
+Edge = Tuple[JunctionBox, JunctionBox, int]
 
 # --- Fonctions Union-Find ---
 
-def Find(box, parent):
+def Find(box: JunctionBox, parent: Dict[JunctionBox, JunctionBox]) -> JunctionBox:
     """Trouve la racine du circuit de la boîte (avec compression de chemin)."""
     if parent[box] == box:
         return box
-    # Compression de chemin
+    # Compression de chemin : rattache directement à la racine
     parent[box] = Find(parent[box], parent)
     return parent[box]
 
-def Union(box1, box2, parent, sizes):
+def Union(box1: JunctionBox, box2: JunctionBox, parent: Dict[JunctionBox, JunctionBox], sizes: Dict[JunctionBox, int]) -> bool:
     """Fusionne les circuits de deux boîtes (avec union par taille)."""
     root1 = Find(box1, parent)
     root2 = Find(box2, parent)
@@ -30,25 +35,25 @@ def Union(box1, box2, parent, sizes):
         return True
     return False
 
-# --- Fonction principale ---
+# --- Fonctions de préparation des données ---
 
-if __name__ == "__main__":
+def parse_input(filepath: str) -> List[JunctionBox]:
+    """Lit le fichier et retourne la liste des positions des boîtes de jonction."""
     junction_boxes_positions = []
-
-    # Le parsing du fichier semble correct.
-    with open("2025/python/day_08/input.txt", "r") as file:
+    with open(filepath, "r") as file:
         for line in file.readlines():
             x, y, z  = re.findall(r"\d+", line)
             junction_boxes_positions.append((int(x), int(y), int(z)))
+    return junction_boxes_positions
 
-    # Utiliser une liste de triplets (boîte1, boîte2, distance_carrée) pour le tri
-    junction_boxes_distances = []
+def generate_and_sort_edges(positions: List[JunctionBox]) -> List[Edge]:
+    """Génère toutes les paires uniques et les trie par carré de distance."""
+    junction_boxes_distances: List[Edge] = []
     
-    # Remplacer la distance euclidienne par le carré de la distance
-    for i in range(len(junction_boxes_positions) - 1):
-        p1 = junction_boxes_positions[i]
-        for j in range(i + 1, len(junction_boxes_positions)):
-            p2 = junction_boxes_positions[j]
+    for i in range(len(positions) - 1):
+        p1 = positions[i]
+        for j in range(i + 1, len(positions)):
+            p2 = positions[j]
             
             dx = p1[0] - p2[0]
             dy = p1[1] - p2[1]
@@ -57,60 +62,112 @@ if __name__ == "__main__":
             # Calcul du carré de la distance
             distance_squared = dx*dx + dy*dy + dz*dz
             
-            # On utilise les coordonnées des boîtes comme clés dans l'Union-Find
             junction_boxes_distances.append((p1, p2, distance_squared))
 
     # Tri par distance (carrée)
-    sorted_junction_boxes_distances = sorted(junction_boxes_distances, key=lambda x: x[2])
+    return sorted(junction_boxes_distances, key=lambda x: x[2])
 
-    # Initialisation Union-Find
-    parent = {} # Qui est le parent/représentant de cette boîte
-    sizes = {}  # Taille du circuit, stockée uniquement à la racine
-    
-    for jb in junction_boxes_positions:
+def initialize_union_find(positions: List[JunctionBox]) -> Tuple[Dict[JunctionBox, JunctionBox], Dict[JunctionBox, int]]:
+    """Initialise les structures Union-Find (parent et sizes)."""
+    parent = {}
+    sizes = {}
+    for jb in positions:
         parent[jb] = jb
         sizes[jb] = 1
+    return parent, sizes
 
-    # Processus de connexion : 10 connexions pour l'exemple, 1000 pour le puzzle
-    # L'exemple demande les 10 plus courtes arêtes.
-    NUM_CONNECTIONS = 1000
+# ----------------------------------------
+## 🧩 Partie 1: Connexion des 1000 paires les plus courtes
+# ----------------------------------------
+
+def solve_part_one(positions: List[JunctionBox], sorted_edges: List[Edge], num_connections: int) -> int:
+    """Connecte le nombre d'arêtes spécifié et calcule le produit des 3 plus grandes tailles de circuits."""
     
-    for i in range(NUM_CONNECTIONS):
-        jb1, jb2, _ = sorted_junction_boxes_distances[i]
-        
-        # Utiliser la fonction Union
+    # Réinitialisation de l'état Union-Find
+    parent, sizes = initialize_union_find(positions)
+
+    # Processus de connexion
+    for i in range(num_connections):
+        if i >= len(sorted_edges):
+            break
+            
+        jb1, jb2, _ = sorted_edges[i]
         Union(jb1, jb2, parent, sizes)
 
     # Récupérer les tailles finales des circuits
     circuit_sizes = []
-    
     # On itère sur toutes les boîtes, mais on ne garde que les tailles de celles qui sont des racines
-    # En pratique, on peut itérer sur le dictionnaire sizes et ne garder que les clés qui sont des racines
-    
-    # Solution 1: Filtrer les racines
-    for box in junction_boxes_positions:
-        if parent[box] == box:
+    for box in positions:
+        if Find(box, parent) == box: # Vérifier si la boîte est la racine
             circuit_sizes.append(sizes[box])
-    
-    # Solution 2: Filtrer le dictionnaire sizes (plus direct car on sait que la clé est la racine)
-    # circuit_sizes = [size for box, size in sizes.items() if Find(box, parent) == box]
 
-    
     # Trier les tailles et multiplier les trois plus grandes
     circuit_sizes.sort(reverse=True)
-
-    # L'exemple demande de multiplier les trois plus grandes, même si elles sont moins de trois
-    # (Bien que l'exemple de 20 boîtes et 10 connexions donnera 11 circuits, donc 11 tailles)
     
-    if len(circuit_sizes) < 3:
-        # Gérer le cas où il y a moins de 3 circuits, si besoin (peu probable avec le puzzle réel)
-        print("Moins de 3 circuits trouvés.")
-        lengths = circuit_sizes
+    # Assurez-vous d'avoir au moins 3 tailles (si moins, math.prod gérera)
+    lengths = circuit_sizes[0:3]
+    
+    return math.prod(lengths)
+
+# ----------------------------------------
+## 🧩 Partie 2: Dernière connexion pour un circuit unique
+# ----------------------------------------
+
+def solve_part_two(positions: List[JunctionBox], sorted_edges: List[Edge]) -> int:
+    """Continue la connexion jusqu'à ce que toutes les boîtes forment un seul circuit et retourne le produit des coordonnées X de la dernière paire."""
+    
+    # Réinitialisation de l'état Union-Find
+    parent, sizes = initialize_union_find(positions)
+
+    N = len(positions)
+    num_circuits = N
+    derniere_connexion_jb1 = None
+    derniere_connexion_jb2 = None
+
+    # Processus de connexion jusqu'à ce que num_circuits == 1
+    for jb1, jb2, _ in sorted_edges:
+        
+        if Union(jb1, jb2, parent, sizes):
+            num_circuits -= 1
+            
+            if num_circuits == 1:
+                # La dernière arête qui connecte tout!
+                derniere_connexion_jb1 = jb1
+                derniere_connexion_jb2 = jb2
+                break
+
+    # Calcul du résultat
+    if derniere_connexion_jb1 and derniere_connexion_jb2:
+        x1 = derniere_connexion_jb1[0]
+        x2 = derniere_connexion_jb2[0]
+        return x1 * x2
     else:
-        lengths = circuit_sizes[0:3]
+        # Ceci ne devrait pas arriver si le graphe est connexe
+        return 0
 
-    result = math.prod(lengths)
-    print(f"Les trois plus grandes tailles de circuits sont : {lengths}")
-    print(f"Le résultat (produit des trois plus grandes tailles) est : {result}")
+# ----------------------------------------
+## 🚀 Exécution principale
+# ----------------------------------------
 
-    # Le résultat attendu pour l'exemple est 40 (5 * 4 * 2)
+if __name__ == "__main__":
+    # NOTE : Changer le chemin du fichier pour votre puzzle input complet!
+    FILEPATH = "2025/python/day_08/input.txt"
+    
+    positions = parse_input(FILEPATH)
+    sorted_edges = generate_and_sort_edges(positions)
+    
+    # --- Résolution Partie 1 ---
+    # Pour l'exemple, c'est 10 connexions. Pour le puzzle réel, ce sera 1000.
+    NUM_CONNECTIONS_PART_ONE = 10 if FILEPATH.endswith("sample.txt") else 1000
+    
+    result_part_one = solve_part_one(positions, sorted_edges, NUM_CONNECTIONS_PART_ONE)
+    
+    print("--- Résultat Partie 1 ---")
+    print(f"Connexions : {NUM_CONNECTIONS_PART_ONE}")
+    print(f"Produit des 3 plus grandes tailles de circuits : {result_part_one} (Attendu pour l'exemple: 40)")
+    
+    # --- Résolution Partie 2 ---
+    result_part_two = solve_part_two(positions, sorted_edges)
+    
+    print("\n--- Résultat Partie 2 ---")
+    print(f"Produit des coordonnées X de la dernière connexion : {result_part_two} (Attendu pour l'exemple: 25272)")
