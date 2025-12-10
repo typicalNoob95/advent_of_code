@@ -150,7 +150,6 @@ def solve_part_two(positions: List[JunctionBox], sorted_edges: List[Edge]) -> in
 # ----------------------------------------
 
 if __name__ == "__main__":
-    # NOTE : Changer le chemin du fichier pour votre puzzle input complet!
     FILEPATH = "2025/python/day_08/input.txt"
     
     positions = parse_input(FILEPATH)
